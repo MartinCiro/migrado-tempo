@@ -1,2 +1,15 @@
 .env
 .env.*
+*.png
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.pem
+base
+handlers
+conexion_whatsapp.go
