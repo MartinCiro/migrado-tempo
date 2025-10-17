@@ -1,4 +1,4 @@
-module scrapper_go_email
+module email
 
 go 1.25.1
 

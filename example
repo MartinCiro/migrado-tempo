@@ -1,0 +1,6 @@
+# Entorno
+DEBUG=true or false
+PORT=8080 or port number
+
+GMAIL_EMAIL= your gmail address
+GMAIL_APP_PASSWORD= your gmail app password
