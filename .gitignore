@@ -13,3 +13,5 @@
 base
 handlers
 conexion_whatsapp.go
+credentials.json
+token.json

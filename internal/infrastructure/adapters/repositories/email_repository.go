@@ -2,70 +2,49 @@ package repositories
 
 import (
 	"email/internal/core/domain"
-	"email/internal/infrastructure/adapters/imap"
+	gmailapi "email/internal/infrastructure/adapters/gmail_api"
+	"strconv"
+	"strings"
+	"time"
+
+	"google.golang.org/api/gmail/v1"
 )
 
 type EmailRepository struct {
-	imapClient *imap.IMAPClient
+	gmailClient *gmailapi.GmailClient
 }
 
-func NewEmailRepository(imapClient *imap.IMAPClient) *EmailRepository {
+func NewEmailRepository(gmailClient *gmailapi.GmailClient) *EmailRepository {
 	return &EmailRepository{
-		imapClient: imapClient,
+		gmailClient: gmailClient,
 	}
 }
 
 func (r *EmailRepository) Connect() error {
-	if err := r.imapClient.Connect(); err != nil {
-		return err
-	}
-
-	if err := r.imapClient.Login(); err != nil {
-		return err
-	}
-
-	return r.imapClient.SelectMailbox("INBOX")
+	return nil
 }
 
 func (r *EmailRepository) Disconnect() error {
-	return r.imapClient.Logout()
+	return nil
 }
 
 func (r *EmailRepository) SearchEmails(criteria domain.EmailCriteria) ([]domain.Email, error) {
-	var uids []uint32
-	var err error
-
-	if criteria.UnreadOnly {
-		uids, err = r.imapClient.SearchUnread()
-	} else {
-		// Implementar búsqueda general si es necesario
-		uids, err = r.imapClient.SearchUnread() // Por ahora solo unread
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(uids) == 0 {
-		return []domain.Email{}, nil
-	}
-
-	imapMessages, err := r.imapClient.FetchMessages(uids)
+	messages, err := r.gmailClient.ListUnreadMessages()
 	if err != nil {
 		return nil, err
 	}
 
 	var emails []domain.Email
-	for _, msg := range imapMessages {
+	for i, msg := range messages {
 		email := domain.Email{
-			ID:      msg.SeqNum,
-			Subject: msg.Envelope.Subject,
-			Date:    msg.Envelope.Date,
-			Read:    !containsFlag(msg.Flags, "\\Seen"),
-		}
-
-		if len(msg.Envelope.From) > 0 {
-			email.From = msg.Envelope.From[0].Address()
+			// Solución 1: Usar el índice como ID temporal
+			ID: uint32(i),
+			// Solución 2: Convertir el InternalDate a uint32 (si es seguro)
+			// ID: uint32(msg.InternalDate), // CUIDADO: Puede haber overflow
+			Subject: r.extractHeader(msg.Payload.Headers, "Subject"),
+			From:    r.extractHeader(msg.Payload.Headers, "From"),
+			Date:    time.Unix(msg.InternalDate/1000, 0),
+			Read:    !containsLabel(msg.LabelIds, "UNREAD"),
 		}
 
 		emails = append(emails, email)
@@ -74,9 +53,45 @@ func (r *EmailRepository) SearchEmails(criteria domain.EmailCriteria) ([]domain.
 	return emails, nil
 }
 
-func containsFlag(flags []string, flag string) bool {
-	for _, f := range flags {
-		if f == flag {
+// Método alternativo si quieres usar el ID del mensaje de Gmail
+func (r *EmailRepository) SearchEmailsWithMessageId(criteria domain.EmailCriteria) ([]domain.Email, error) {
+	messages, err := r.gmailClient.ListUnreadMessages()
+	if err != nil {
+		return nil, err
+	}
+
+	var emails []domain.Email
+	for _, msg := range messages {
+		// Convertir el ID del mensaje (string) a un número
+		// Esto es un ejemplo - necesitarías una forma de convertir string a uint32
+		id, _ := strconv.ParseUint(msg.Id, 10, 32)
+
+		email := domain.Email{
+			ID:      uint32(id),
+			Subject: r.extractHeader(msg.Payload.Headers, "Subject"),
+			From:    r.extractHeader(msg.Payload.Headers, "From"),
+			Date:    time.Unix(msg.InternalDate/1000, 0),
+			Read:    !containsLabel(msg.LabelIds, "UNREAD"),
+		}
+
+		emails = append(emails, email)
+	}
+
+	return emails, nil
+}
+
+func (r *EmailRepository) extractHeader(headers []*gmail.MessagePartHeader, name string) string {
+	for _, header := range headers {
+		if strings.EqualFold(header.Name, name) {
+			return header.Value
+		}
+	}
+	return ""
+}
+
+func containsLabel(labels []string, target string) bool {
+	for _, label := range labels {
+		if label == target {
 			return true
 		}
 	}

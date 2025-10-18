@@ -8,14 +8,13 @@ import (
 )
 
 type Config struct {
-	Port             int
-	Debug            bool
-	GmailEmail       string
-	GmailAppPassword string
+	Port              int
+	Debug             bool
+	OAuthClientSecret string
+	OAuthTokenFile    string
 }
 
 func Load() (*Config, error) {
-	// Cargar archivo .env (opcional - ignora el error si no existe)
 	godotenv.Load()
 
 	port, err := strconv.Atoi(getEnv("PORT", "8080"))
@@ -29,10 +28,10 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:             port,
-		Debug:            debug,
-		GmailEmail:       getEnv("GMAIL_EMAIL", ""),
-		GmailAppPassword: getEnv("GMAIL_APP_PASSWORD", ""),
+		Port:              port,
+		Debug:             debug,
+		OAuthClientSecret: getEnv("OAUTH_CLIENT_SECRET", "credentials.json"),
+		OAuthTokenFile:    getEnv("OAUTH_TOKEN_FILE", "token.json"),
 	}, nil
 }
 

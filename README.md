@@ -1,26 +1,37 @@
 ## 🏗️ Estructura del Proyecto
 
 ```
-play-go/
+email/
 ├── cmd/
-│   ├── bot/
-│   │   └── main.go                 # Bot standalone
-│   └── tiktok-chat/
-│       └── main.go                 # Integración TikTok
+│   └── email/
+│       └── main.go
 ├── internal/
-│   ├── core/                       # Lógica de negocio
-│   │   ├── domain/                 # Entidades e interfaces
-│   │   ├── application/            # Casos de uso y servicios
-│   │   └── usecases/               # Lógica específica
-│   └── infrastructure/             # Adaptadores externos
+│   ├── core/
+│   │   ├── domain/
+│   │   │   ├── email.go
+│   │   │   └── auth.go          # Nuevo
+│   │   └── ports/
+│   │       ├── email_service.go
+│   │       ├── repositories.go
+│   │       └── auth_service.go  # Nuevo
+│   ├── application/
+│   │   └── services/
+│   │       ├── email_service.go
+│   │       └── auth_service.go  # Nuevo
+│   └── infrastructure/
 │       ├── adapters/
-│       │   ├── providers/          # YouTube, Spotify (futuro)
-│       │   ├── player/             # Reproductor ffplay
-│       │   └── persistence/        # Almacenamiento en memoria
-│       └── delivery/               # CLI y TikTok
-├── pkg/
-│   ├── ffmpeg/                     # Instalador automático
-│   ├── logger/                     # Sistema de logging
-│   └── utils/                      # Utilidades compartidas
-└── tests/                          # Pruebas unitarias
+│       │   ├── gmail_api/       # Cambiado de imap
+│       │   │   └── gmail_client.go
+│       │   ├── oauth2/          # Nuevo
+│       │   │   └── oauth2_manager.go
+│       │   └── repositories/
+│       │       └── email_repository.go
+│       └── delivery/
+│           └── cli/
+│               └── email_reader.go
+├── config/
+│   └── config.go
+├── credentials.json             # Archivo de credenciales OAuth2
+├── token.json                   # Token almacenado
+└── go.mod                        # Pruebas unitarias
 ```
