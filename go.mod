@@ -3,6 +3,7 @@ module email
 go 1.25.1
 
 require (
+	github.com/emersion/go-imap v1.2.1
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/oauth2 v0.32.0
 	google.golang.org/api v0.252.0
