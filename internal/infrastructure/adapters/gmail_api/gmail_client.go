@@ -315,7 +315,6 @@ func (c *gmailClient) DeleteEmail(ctx context.Context, emailID string) error {
 }
 
 // convertGmailMessage convierte un mensaje de Gmail a nuestro dominio
-// convertGmailMessage convierte un mensaje de Gmail a nuestro dominio
 func (c *gmailClient) convertGmailMessage(gmailMsg *gmail.Message) (*domain.Email, error) {
     // ✅ VALIDACIÓN: Verificar que el mensaje no sea nil
     if gmailMsg == nil {

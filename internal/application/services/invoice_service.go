@@ -43,8 +43,48 @@ func (s *invoiceService) ProcessInvoiceFromXML(ctx context.Context, xmlData stri
 		return nil, fmt.Errorf("XML processing error: %s", result.Msg)
 	}
 
+	// IMPRIMIR DATOS EXTRAÍDOS DEL XML
+	/* fmt.Println("=== DATOS EXTRAÍDOS DEL XML ===")
+	fmt.Printf("ID Factura: %s\n", result.Data.IDFactura)
+	fmt.Printf("ProfileID: %s\n", result.Data.ProfileID)
+	fmt.Printf("Fecha Emisión: %v\n", result.Data.IssueDate)
+	fmt.Printf("Fecha Vencimiento: %v\n", result.Data.PaymentDueDate)
+	fmt.Printf("Monto Total: %s\n", result.Data.PayableAmount)
+	fmt.Printf("Monto Gravable: %s\n", result.Data.TaxableAmount)
+	fmt.Printf("Descuento: %s\n", result.Data.DiscountAmountApplied)
+	fmt.Printf("Cantidad: %s\n", result.Data.InvoicedQuantity)
+	fmt.Printf("Vendedor: %s (NIT: %s)\n", result.Data.Seller.Name, result.Data.Seller.NIT)
+	fmt.Printf("Comprador: %s (NIT: %s)\n", result.Data.Buyer.Name, result.Data.Buyer.NIT)
+	fmt.Printf("Descripción Producto: %s\n", result.Data.InvoiceDetails.ProductDescription)
+	fmt.Printf("Cantidad Detalle: %s\n", result.Data.InvoiceDetails.Quantity)
+	fmt.Printf("Precio Unitario: %s\n", result.Data.InvoiceDetails.UnitPrice)
+	fmt.Printf("Subtotal: %s\n", result.Data.InvoiceDetails.Subtotal)
+	fmt.Printf("IVA: %s%%\n", result.Data.InvoiceDetails.TaxPercentageIVA)
+	fmt.Printf("Impuestos: %s\n", result.Data.InvoiceDetails.Taxes)
+	fmt.Println("=================================")
+ */
 	// Convertir a estructura de datos para API
 	invoiceData := s.convertToInvoiceData(result.Data)
+
+	// IMPRIMIR DATOS CONVERTIDOS PARA API
+	/* fmt.Println("=== DATOS CONVERTIDOS PARA API ===")
+	fmt.Printf("FEVIdFac: %s\n", invoiceData.FEVIdFac)
+	fmt.Printf("ProductQuantity: %s\n", invoiceData.ProductQuantity)
+	fmt.Printf("ProductSubtotal: %s\n", invoiceData.ProductSubtotal)
+	fmt.Printf("ProductTaxes: %s\n", invoiceData.ProductTaxes)
+	fmt.Printf("ProductIVA: %s\n", invoiceData.ProductIVA)
+	fmt.Printf("ProductVlrTotalChecked: %s\n", invoiceData.ProductVlrTotalChecked)
+	fmt.Printf("ProductVlrTotal: %s\n", invoiceData.ProductVlrTotal)
+	fmt.Printf("DiscountGlobalApplied: %s\n", invoiceData.DiscountGlobalApplied)
+	fmt.Printf("IssueDate: %s\n", invoiceData.IssueDate)
+	fmt.Printf("PaymentDueDate: %s\n", invoiceData.PaymentDueDate)
+	fmt.Printf("SellerNIT: %s\n", invoiceData.SellerNIT)
+	fmt.Printf("BuyerNIT: %s\n", invoiceData.BuyerNIT)
+	fmt.Printf("SocialReasonSeller: %s\n", invoiceData.SocialReasonSeller)
+	fmt.Printf("SocialReasonBuyer: %s\n", invoiceData.SocialReasonBuyer)
+	fmt.Printf("ProductDescription: %s\n", invoiceData.ProductDescription)
+	fmt.Printf("ProductVlrUnit: %s\n", invoiceData.ProductVlrUnit)
+	fmt.Println("===================================") */
 
 	return invoiceData, nil
 }
