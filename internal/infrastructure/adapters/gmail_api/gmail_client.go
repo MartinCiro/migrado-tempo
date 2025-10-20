@@ -366,11 +366,9 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 		return nil
 	}
 
-	//fmt.Printf("  🔍 Processing part: %s\n", part.MimeType)
-
-	// Procesar adjuntos en esta parte
-	if part.Filename != "" {
-		//fmt.Printf("  📎 Found file: %s (MIME: %s)\n", part.Filename, part.MimeType)
+	// ✅ SOLO procesar archivos ZIP
+	if part.Filename != "" && strings.HasSuffix(strings.ToLower(part.Filename), ".zip") {
+		//fmt.Printf("  📎 Found ZIP file: %s (MIME: %s)\n", part.Filename, part.MimeType)
 
 		var attachmentData []byte
 		var err error
@@ -379,24 +377,24 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 		if part.Body != nil && part.Body.Data != "" {
 			attachmentData, err = base64.URLEncoding.DecodeString(part.Body.Data)
 			if err != nil {
-				fmt.Printf("  ❌ Error decoding attachment data: %v\n", err)
+				fmt.Printf("  ❌ Error decoding ZIP data: %v\n", err)
 			} else {
-				fmt.Printf("  💾 Attachment data from body: %d bytes\n", len(attachmentData))
+				fmt.Printf("  💾 ZIP data from body: %d bytes\n", len(attachmentData))
 			}
 		}
 
 		// Caso 2: Attachment ID (necesita descarga separada)
-		if part.Body != nil && part.Body.AttachmentId != "" {
-			//fmt.Printf("  🔗 Downloading attachment with ID: %s\n", part.Body.AttachmentId)
+		if len(attachmentData) == 0 && part.Body != nil && part.Body.AttachmentId != "" {
+			//fmt.Printf("  🔗 Downloading ZIP attachment with ID: %s\n", part.Body.AttachmentId)
 			attachment, err := c.service.Users.Messages.Attachments.Get("me", email.ID, part.Body.AttachmentId).Do()
 			if err != nil {
-				fmt.Printf("  ❌ Error downloading attachment: %v\n", err)
+				fmt.Printf("  ❌ Error downloading ZIP: %v\n", err)
 			} else {
 				attachmentData, err = base64.URLEncoding.DecodeString(attachment.Data)
 				if err != nil {
-					fmt.Printf("  ❌ Error decoding downloaded attachment: %v\n", err)
+					fmt.Printf("  ❌ Error decoding downloaded ZIP: %v\n", err)
 				} else {
-					fmt.Printf("  💾 Downloaded attachment: %d bytes\n", len(attachmentData))
+					fmt.Printf("  💾 Downloaded ZIP: %d bytes\n", len(attachmentData))
 				}
 			}
 		}
@@ -408,11 +406,13 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 				Content:  attachmentData,
 				MIMEType: part.MimeType,
 			})
-			//fmt.Printf("  ✅ Added attachment: %s (%d bytes)\n", part.Filename, len(attachmentData))
+			//fmt.Printf("  ✅ Added ZIP attachment: %s (%d bytes)\n", part.Filename, len(attachmentData))
 		}
 	}
 
-	// Procesar partes hijas recursivamente
+	// ❌ ELIMINAR: No procesar otros tipos de archivos (JPG, PDF, etc.)
+
+	// Procesar partes hijas recursivamente SOLO para seguir buscando ZIPs
 	if part.Parts != nil {
 		for _, subpart := range part.Parts {
 			//fmt.Printf("  🔄 Processing subpart %d/%d\n", i+1, len(part.Parts))

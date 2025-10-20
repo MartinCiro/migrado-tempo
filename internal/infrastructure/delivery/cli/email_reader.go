@@ -6,7 +6,6 @@ import (
 	"email/internal/core/ports"
 	"fmt"
 	"log"
-	"time"
 )
 
 type EmailReader struct {
@@ -40,17 +39,11 @@ func (er *EmailReader) Run(ctx context.Context) {
 		fmt.Println("✅ Initial execution completed successfully")
 	}
 
-	// Solo ejecutar periódicamente si hay configuración y intervalo > 0
-	if er.config != nil && er.config.ScrapingInterval > 0 {
-		//fmt.Printf("🔄 Starting periodic execution every %d minutes...\n", er.config.ScrapingInterval)
-		er.runPeriodically(ctx)
-	} else {
-		fmt.Println("⏹️  Scraping interval is 0 or config missing, running once only")
-		fmt.Println("🏁 Application finished")
-	}
+	// ✅ TERMINAR INMEDIATAMENTE después de la ejecución
+	fmt.Println("🏁 Application finished")
 }
 
-func (er *EmailReader) runPeriodically(ctx context.Context) {
+/* func (er *EmailReader) runPeriodically(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(er.config.ScrapingInterval) * time.Minute)
 	defer ticker.Stop()
 
@@ -70,4 +63,4 @@ func (er *EmailReader) runPeriodically(ctx context.Context) {
 			return
 		}
 	}
-}
+} */
