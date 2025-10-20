@@ -1,6 +1,8 @@
 module email
 
-go 1.25.1
+go 1.24.0
+
+toolchain go1.24.4
 
 require (
 	github.com/emersion/go-imap v1.2.1

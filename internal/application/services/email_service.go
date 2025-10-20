@@ -17,7 +17,7 @@ func NewEmailService(emailRepo ports.EmailRepository) ports.EmailService {
 
 func (s *emailService) GetUnreadEmails() ([]domain.Email, error) {
 	criteria := domain.EmailCriteria{
-		UnreadOnly: true,
+		Unread: true,
 	}
 
 	return s.emailRepo.SearchEmails(criteria)

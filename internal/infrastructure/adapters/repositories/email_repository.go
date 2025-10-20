@@ -1,99 +1,59 @@
 package repositories
 
 import (
-	"email/internal/core/domain"
-	gmailapi "email/internal/infrastructure/adapters/gmail_api"
-	"strconv"
-	"strings"
-	"time"
+	"context"
 
-	"google.golang.org/api/gmail/v1"
+	"email/internal/core/domain"
+	"email/internal/core/ports"
 )
 
-type EmailRepository struct {
-	gmailClient *gmailapi.GmailClient
+type emailRepository struct {
+	gmailClient ports.EmailRepository
 }
 
-func NewEmailRepository(gmailClient *gmailapi.GmailClient) *EmailRepository {
-	return &EmailRepository{
+func NewEmailRepository(gmailClient ports.EmailRepository) ports.EmailRepository {
+	return &emailRepository{
 		gmailClient: gmailClient,
 	}
 }
 
-func (r *EmailRepository) Connect() error {
-	return nil
+func (r *emailRepository) Connect() error {
+	return r.gmailClient.Connect()
 }
 
-func (r *EmailRepository) Disconnect() error {
-	return nil
+func (r *emailRepository) Disconnect() error {
+	return r.gmailClient.Disconnect()
 }
 
-func (r *EmailRepository) SearchEmails(criteria domain.EmailCriteria) ([]domain.Email, error) {
-	messages, err := r.gmailClient.ListUnreadMessages()
-	if err != nil {
-		return nil, err
-	}
-
-	var emails []domain.Email
-	for i, msg := range messages {
-		email := domain.Email{
-			// Solución 1: Usar el índice como ID temporal
-			ID: uint32(i),
-			// Solución 2: Convertir el InternalDate a uint32 (si es seguro)
-			// ID: uint32(msg.InternalDate), // CUIDADO: Puede haber overflow
-			Subject: r.extractHeader(msg.Payload.Headers, "Subject"),
-			From:    r.extractHeader(msg.Payload.Headers, "From"),
-			Date:    time.Unix(msg.InternalDate/1000, 0),
-			Read:    !containsLabel(msg.LabelIds, "UNREAD"),
-		}
-
-		emails = append(emails, email)
-	}
-
-	return emails, nil
+func (r *emailRepository) GetLabelID(ctx context.Context, labelName string) (string, error) {
+	return r.gmailClient.GetLabelID(ctx, labelName)
 }
 
-// Método alternativo si quieres usar el ID del mensaje de Gmail
-func (r *EmailRepository) SearchEmailsWithMessageId(criteria domain.EmailCriteria) ([]domain.Email, error) {
-	messages, err := r.gmailClient.ListUnreadMessages()
-	if err != nil {
-		return nil, err
-	}
-
-	var emails []domain.Email
-	for _, msg := range messages {
-		// Convertir el ID del mensaje (string) a un número
-		// Esto es un ejemplo - necesitarías una forma de convertir string a uint32
-		id, _ := strconv.ParseUint(msg.Id, 10, 32)
-
-		email := domain.Email{
-			ID:      uint32(id),
-			Subject: r.extractHeader(msg.Payload.Headers, "Subject"),
-			From:    r.extractHeader(msg.Payload.Headers, "From"),
-			Date:    time.Unix(msg.InternalDate/1000, 0),
-			Read:    !containsLabel(msg.LabelIds, "UNREAD"),
-		}
-
-		emails = append(emails, email)
-	}
-
-	return emails, nil
+func (r *emailRepository) GetEmailsByLabel(ctx context.Context, labelName string) ([]domain.Email, error) {
+	return r.gmailClient.GetEmailsByLabel(ctx, labelName)
 }
 
-func (r *EmailRepository) extractHeader(headers []*gmail.MessagePartHeader, name string) string {
-	for _, header := range headers {
-		if strings.EqualFold(header.Name, name) {
-			return header.Value
-		}
-	}
-	return ""
+func (r *emailRepository) FindZipAttachments(ctx context.Context, messageID string) ([][]byte, []string, error) {
+	return r.gmailClient.FindZipAttachments(ctx, messageID)
 }
 
-func containsLabel(labels []string, target string) bool {
-	for _, label := range labels {
-		if label == target {
-			return true
-		}
+func (r *emailRepository) SearchEmails(criteria domain.EmailCriteria) ([]domain.Email, error) {
+	filter := domain.EmailFilter{
+		From:    criteria.From,
+		Subject: criteria.Subject,
+		Since:   criteria.Since,
 	}
-	return false
+	return r.gmailClient.GetEmails(context.Background(), filter)
+}
+
+func (r *emailRepository) GetEmails(ctx context.Context, filter domain.EmailFilter) ([]domain.Email, error) {
+	return r.gmailClient.GetEmails(ctx, filter)
+}
+
+func (r *emailRepository) SaveEmail(ctx context.Context, email *domain.Email) error {
+	return r.gmailClient.SaveEmail(ctx, email)
+}
+
+func (r *emailRepository) DeleteEmail(ctx context.Context, emailID string) error {
+	return r.gmailClient.DeleteEmail(ctx, emailID)
 }

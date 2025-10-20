@@ -1,0 +1,57 @@
+{
+    "folders": {
+        "zip": "/vendor/zip",
+        "xml": "/vendor/xml", 
+        "pdf": "/vendor/pdf",
+        "json": "/vendor/json/result_api.json"
+    },
+    "credentials": "/vendor/credentials.json",
+    "token": "/vendor/token.json",
+    "causacion": {
+        "O-06": "Ingresos y patrimonio",
+        "O-07": "Retención en la fuente a título de renta",
+        "O-08": "Retención timbre nacional",
+        "O-09": "Retención en la fuente en el impuesto sobre las ventas",
+        "O-11": "Ventas régimen común",
+        "O-12": "Ventas régimen simplificado",
+        "O-13": "Gran contribuyente",
+        "O-14": "Informante de exógena",
+        "O-15": "Autorretenedor",
+        "O-16": "Obligación de facturar por ingreso de bienes y/o servicios excluidos",
+        "O-17": "Profesionales de compra y venta de divisas",
+        "O-19": "Productor y/o exportador de bienes exentos",
+        "O-22": "Obligado a cumplir deberes formales a nombre de terceros",
+        "O-23": "Agente de retención en el impuesto sobre las ventas",
+        "O-32": "Impuesto Nacional a la Gasolina y al ACPM",
+        "O-33": "Impuesto Nacional al consumo",
+        "O-34": "Régimen simplificado impuesto nacional consumo rest y bares",
+        "O-36": "Establecimiento Permanente",
+        "O-37": "Obligado a Facturar Electrónicamente Modelo 2242",
+        "O-38": "Facturación Electrónica Voluntaria Modelo 2242",
+        "O-39": "Proveedor de Servicios Tecnológicos PST Modelo 2242",
+        "O-99": "Otro tipo de obligado",
+        "R-12-PN": "Factor PN",
+        "R-16-PN": "Mandatario PN",
+        "R-25-PN": "Agente Interventor PN",
+        "R-99-PN": "Otro tipo de responsable PN",
+        "R-06-PJ": "Apoderado especial PJ",
+        "R-07-PJ": "Apoderado general PJ",
+        "R-09-PJ": "Factor PJ",
+        "R-16-PJ": "Mandatario PJ",
+        "R-99-PJ": "Otro tipo de responsable PJ",
+        "A-00": "Agente de carga nacional",
+        "A-01": "Agente de carga internacional",
+        "A-02": "Agente marítimo",
+        "A-03": "Almacén general de depósito"
+    },
+    "api": {
+        "host": "http://localhost:3000",
+        "endpoints": {
+            "login": "auth/login",
+            "nits": "nits", 
+            "facturas": "facturas",
+            "facturas_pdf": "factura/pdf"
+        }
+    },
+    "example": "/vendor/example.json"
+}
