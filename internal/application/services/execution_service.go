@@ -173,9 +173,9 @@ func (s *executionService) processZipFile(ctx context.Context, zipPath, token st
 	}
 
 	// Limpiar archivos procesados
-	if err := s.cleanProcessedFiles(); err != nil {
+	/* if err := s.cleanProcessedFiles(); err != nil {
 		return fmt.Errorf("error cleaning processed files: %w", err)
-	}
+	} */
 
 	return nil
 }
@@ -261,7 +261,7 @@ func (s *executionService) cleanProcessedFiles() error {
 }
 
 func (s *executionService) ProcessEmails(ctx context.Context, nits []string, token string) error {
-    //fmt.Printf("📧 Processing UNREAD emails from label 'No eliminar/pb scrapping' for %d NITs: %v\n", len(nits), nits)
+    fmt.Printf("📧 Processing emails from label 'No eliminar/pb scrapping' for %d NITs: %v\n", len(nits), nits)
 
     filter := domain.EmailFilter{
         Unread: true,
@@ -270,82 +270,77 @@ func (s *executionService) ProcessEmails(ctx context.Context, nits []string, tok
     
     emails, err := s.emailRepo.GetEmails(ctx, filter)
     if err != nil {
-        return fmt.Errorf("error fetching UNREAD emails from label: %w", err)
+        return fmt.Errorf("error fetching emails from label: %w", err)
     }
 
-    //fmt.Printf("📨 Found %d UNREAD emails in label 'No eliminar/pb scrapping'\n", len(emails))
-    
-    // ✅ MOSTRAR TODOS LOS SUBJECTS
-    /* //fmt.Printf("\n📋 ALL EMAIL SUBJECTS:\n")
-    for i, email := range emails {
-        //fmt.Printf("  %d. '%s'\n", i+1, email.Subject)
-    }
-    //fmt.Printf("\n") */
+    fmt.Printf("📨 Found %d emails in label\n", len(emails))
 
     var adjuntos []string
     var correosSinAdjunto []map[string]string
     var emailsFiltrados int
 
     for _, email := range emails {
-        // Filtrar por palabras clave (NITs) en el asunto
         if !s.emailMatchesNITs(email, nits) {
             continue
         }
         emailsFiltrados++
 
-        //fmt.Printf("\n✅ 📧 [%d/%d] Processing matching email: %s\n", emailsFiltrados, len(emails), email.Subject)
+        fmt.Printf("\n✅ 📧 [%d/%d] Processing matching email: %s\n",
+            emailsFiltrados, len(emails), email.Subject)
 
-        // Buscar adjuntos ZIP usando el método específico
+        // ✅ SOLO usar FindZipAttachments para emails que coinciden con NITs
         zipContents, zipFilenames, err := s.emailRepo.FindZipAttachments(ctx, email.ID)
         if err != nil {
-            //fmt.Printf("  ❌ Error searching for ZIP attachments: %v\n", err)
+            fmt.Printf("  ❌ Error searching for ZIP attachments: %v\n", err)
             continue
         }
 
         if len(zipContents) > 0 {
-            //fmt.Printf("  📦 Found %d ZIP attachments\n", len(zipContents))
+            fmt.Printf("  📦 Found %d ZIP attachments\n", len(zipContents))
             for j, zipData := range zipContents {
                 filename := zipFilenames[j]
-                //fmt.Printf("  💾 Processing ZIP: %s (%d bytes)\n", filename, len(zipData))
+                fmt.Printf("  💾 Processing ZIP: %s (%d bytes)\n", filename, len(zipData))
 
-                // Guardar el ZIP
+                // ✅ Guardar el ZIP en disco
                 savedPath := s.saveZipAttachment(filename, zipData)
                 if savedPath != "" {
                     adjuntos = append(adjuntos, savedPath)
-                    //fmt.Printf("  ✅ ZIP saved: %s\n", savedPath)
+                    fmt.Printf("  ✅ ZIP saved to disk: %s\n", savedPath)
                 }
             }
         } else {
-            //fmt.Printf("  📭 No ZIP attachments found\n")
+            fmt.Printf("  📭 No ZIP attachments found\n")
             // Si no hay adjuntos, extraer datos del asunto
             correoData := s.extractDataFromSubject(email.Subject)
             if correoData != nil {
                 correosSinAdjunto = append(correosSinAdjunto, correoData)
-                //fmt.Printf("  📝 Extracted data from subject: %s\n", correoData["numero_factura"])
+                fmt.Printf("  📝 Extracted data from subject: %s\n", correoData["numero_factura"])
             }
         }
 
         // Marcar como leído después de procesar
         if err := s.emailRepo.DeleteEmail(ctx, email.ID); err != nil {
-            //fmt.Printf("  ⚠️  Could not mark email as read: %v\n", err)
+            fmt.Printf("  ⚠️  Could not mark email as read: %v\n", err)
         }
     }
 
     // Procesar los ZIPs guardados
     for _, zipPath := range adjuntos {
         if err := s.processZipFile(ctx, zipPath, token); err != nil {
-            //fmt.Printf("❌ Error processing ZIP file %s: %v\n", zipPath, err)
+            fmt.Printf("❌ Error processing ZIP file %s: %v\n", zipPath, err)
         }
     }
 
     // Enviar alarmas para correos sin adjunto
     for _, correoData := range correosSinAdjunto {
         if err := s.SendAlarm(ctx, token, correoData); err != nil {
-            //fmt.Printf("❌ Error sending alarm for invoice %s: %v\n", correoData["numero_factura"], err)
+            fmt.Printf("❌ Error sending alarm for invoice %s: %v\n", 
+                correoData["numero_factura"], err)
         }
     }
 
-    //fmt.Printf("✅ Processed %d emails with NITs, found %d ZIPs, %d without attachments\n", emailsFiltrados, len(adjuntos), len(correosSinAdjunto))
+    fmt.Printf("✅ Processed %d emails with NITs, found %d ZIPs, %d without attachments\n",
+        emailsFiltrados, len(adjuntos), len(correosSinAdjunto))
 
     return nil
 }

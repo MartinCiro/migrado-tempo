@@ -1,7 +1,7 @@
 ## 🏗️ Estructura del Proyecto
 
 ```
-email/
+email-bot/
 ├── cmd/
 │   └── email/
 │       └── main.go
@@ -9,29 +9,43 @@ email/
 │   ├── core/
 │   │   ├── domain/
 │   │   │   ├── email.go
-│   │   │   └── auth.go          # Nuevo
+│   │   │   ├── auth.go
+│   │   │   └── invoice.go
 │   │   └── ports/
 │   │       ├── email_service.go
 │   │       ├── repositories.go
-│   │       └── auth_service.go  # Nuevo
+│   │       ├── auth_service.go
+│   │       ├── invoice_service.go
+│   │       └── execution_service.go
 │   ├── application/
 │   │   └── services/
 │   │       ├── email_service.go
-│   │       └── auth_service.go  # Nuevo
+│   │       ├── auth_service.go
+│   │       ├── invoice_service.go
+│   │       └── execution_service.go
 │   └── infrastructure/
 │       ├── adapters/
-│       │   ├── gmail_api/       # Cambiado de imap
+│       │   ├── gmail_api/
 │       │   │   └── gmail_client.go
-│       │   ├── oauth2/          # Nuevo
+│       │   ├── oauth2/
 │       │   │   └── oauth2_manager.go
-│       │   └── repositories/
-│       │       └── email_repository.go
-│       └── delivery/
-│           └── cli/
-│               └── email_reader.go
+│       │   ├── repositories/
+│       │   │   └── email_repository.go
+│       │   └── http/
+│       │       └── api_client.go
+│       ├── delivery/
+│       │   └── cli/
+│       │       └── email_reader.go
+│       └── persistence/
+│           └── file_repository.go
 ├── config/
 │   └── config.go
-├── credentials.json             # Archivo de credenciales OAuth2
-├── token.json                   # Token almacenado
-└── go.mod                        # Pruebas unitarias
+├── vendor/
+│   ├── zip/
+│   ├── pdf/
+│   ├── xml/
+│   └── json/
+├── credentials.json
+├── token.json
+└── go.mod
 ```

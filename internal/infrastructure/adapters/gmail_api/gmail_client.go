@@ -138,13 +138,13 @@ func (c *gmailClient) convertGmailMessageWithDetails(gmailMsg *gmail.Message) (*
 }
 
 // GetEmails obtiene emails basado en el filtro
+// GetEmails obtiene emails basado en el filtro (SOLO METADATOS)
 func (c *gmailClient) GetEmails(ctx context.Context, filter domain.EmailFilter) ([]domain.Email, error) {
-    // Construir query basada en el filtro
     query := c.buildSearchQuery(filter)
     
-    //fmt.Printf("📨 Gmail API Query: '%s'\n", query)
+    fmt.Printf("📨 Gmail API Query: '%s'\n", query)
     
-    // ✅ CORRECCIÓN: List no tiene Format, obtener primero la lista básica
+    // ✅ SOLO obtener metadatos, no contenido completo
     call := c.service.Users.Messages.List("me").Q(query)
     response, err := call.Do()
     if err != nil {
@@ -158,31 +158,62 @@ func (c *gmailClient) GetEmails(ctx context.Context, filter domain.EmailFilter) 
     var emails []domain.Email
     for _, msg := range response.Messages {
         if msg == nil {
-            //fmt.Printf("⚠️  Skipping nil message\n")
             continue
         }
 
-        // ✅ CORRECCIÓN: Obtener cada mensaje individualmente con Format("metadata")
-        fullMsg, err := c.service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
+        // ✅ Obtener solo metadatos básicos (sin adjuntos)
+        basicMsg, err := c.service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
         if err != nil {
-            log.Printf("❌ Error getting full message %s: %v\n", msg.Id, err)
+            log.Printf("❌ Error getting message metadata %s: %v\n", msg.Id, err)
             continue
         }
 
-        email, err := c.convertGmailMessage(fullMsg)
+        email, err := c.convertToBasicEmail(basicMsg)
         if err != nil {
             log.Printf("❌ Error converting message %s: %v\n", msg.Id, err)
             continue
         }
 
-        // Aplicar filtros adicionales
         if c.matchesFilter(email, filter) {
             emails = append(emails, *email)
         }
     }
 
-    //fmt.Printf("📨 Found %d emails with filter Unread=%t, Label='%s'\n", len(emails), filter.Unread, filter.Label)
+    fmt.Printf("📨 Found %d emails with filter Unread=%t, Label='%s'\n", 
+        len(emails), filter.Unread, filter.Label)
     return emails, nil
+}
+
+// convertToBasicEmail convierte solo metadatos básicos (sin adjuntos)
+func (c *gmailClient) convertToBasicEmail(gmailMsg *gmail.Message) (*domain.Email, error) {
+    if gmailMsg == nil {
+        return nil, fmt.Errorf("gmail message is nil")
+    }
+
+    email := &domain.Email{
+        ID:           gmailMsg.Id,
+        InternalDate: gmailMsg.InternalDate,
+    }
+
+    if gmailMsg.Payload == nil || gmailMsg.Payload.Headers == nil {
+        return email, nil
+    }
+
+    // Solo extraer headers básicos
+    for _, header := range gmailMsg.Payload.Headers {
+        switch strings.ToLower(header.Name) {
+        case "from":
+            email.From = header.Value
+        case "subject":
+            email.Subject = header.Value
+        case "date":
+            if parsedDate, err := time.Parse(time.RFC1123Z, header.Value); err == nil {
+                email.ReceivedAt = parsedDate
+            }
+        }
+    }
+
+    return email, nil
 }
 
 func (c *gmailClient) buildSearchQuery(filter domain.EmailFilter) string {
