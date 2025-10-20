@@ -173,9 +173,9 @@ func (s *executionService) processZipFile(ctx context.Context, zipPath, token st
 	}
 
 	// Limpiar archivos procesados
-	/* if err := s.cleanProcessedFiles(); err != nil {
+	if err := s.cleanProcessedFiles(); err != nil {
 		return fmt.Errorf("error cleaning processed files: %w", err)
-	} */
+	}
 
 	return nil
 }
@@ -203,7 +203,7 @@ func (s *executionService) moveExtractedFiles() error {
 }
 
 func (s *executionService) processXMLFile(ctx context.Context, xmlPath, token string) error {
-    xmlName := filepath.Base(xmlPath)
+    //xmlName := filepath.Base(xmlPath)
     
     invoiceData, err := s.invoiceService.ProcessInvoiceFromFile(ctx, xmlPath)
     if err != nil {
