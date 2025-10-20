@@ -40,12 +40,14 @@ func (c *gmailClient) Disconnect() error {
 }
 
 func (c *gmailClient) SearchEmails(criteria domain.EmailCriteria) ([]domain.Email, error) {
-	filter := domain.EmailFilter{
-		From:    criteria.From,
-		Subject: criteria.Subject,
-		Since:   criteria.Since,
-	}
-	return c.GetEmails(context.Background(), filter)
+    filter := domain.EmailFilter{
+        From:    criteria.From,
+        Subject: criteria.Subject,
+        Since:   criteria.Since,
+        Unread:  criteria.Unread, 
+		Label:   criteria.Label,
+    }
+    return c.GetEmails(context.Background(), filter)
 }
 
 // GetEmailsByLabel obtiene emails de una etiqueta específica
@@ -74,8 +76,7 @@ func (c *gmailClient) GetEmailsByLabel(ctx context.Context, labelName string) ([
 			return nil, fmt.Errorf("unable to retrieve messages from label: %v", err)
 		}
 
-		fmt.Printf("📄 Page %d: %d messages, next page: %t\n",
-			pageCount, len(response.Messages), response.NextPageToken != "")
+		//fmt.Printf("📄 Page %d: %d messages, next page: %t\n", pageCount, len(response.Messages), response.NextPageToken != "")
 
 		// Procesar mensajes de esta página
 		for _, msg := range response.Messages {
@@ -97,7 +98,7 @@ func (c *gmailClient) GetEmailsByLabel(ctx context.Context, labelName string) ([
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	fmt.Printf("📨 Total emails retrieved from label '%s': %d\n", labelName, len(allEmails))
+	//fmt.Printf("📨 Total emails retrieved from label '%s': %d\n", labelName, len(allEmails))
 	return allEmails, nil
 }
 
@@ -138,27 +139,82 @@ func (c *gmailClient) convertGmailMessageWithDetails(gmailMsg *gmail.Message) (*
 
 // GetEmails obtiene emails basado en el filtro
 func (c *gmailClient) GetEmails(ctx context.Context, filter domain.EmailFilter) ([]domain.Email, error) {
-	// Usar tu implementación existente
-	messages, err := c.ListUnreadMessages()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve messages: %w", err)
-	}
+    // Construir query basada en el filtro
+    query := c.buildSearchQuery(filter)
+    
+    //fmt.Printf("📨 Gmail API Query: '%s'\n", query)
+    
+    // ✅ CORRECCIÓN: List no tiene Format, obtener primero la lista básica
+    call := c.service.Users.Messages.List("me").Q(query)
+    response, err := call.Do()
+    if err != nil {
+        return nil, fmt.Errorf("unable to retrieve messages: %w", err)
+    }
 
-	var emails []domain.Email
-	for _, msg := range messages {
-		email, err := c.convertGmailMessage(msg)
-		if err != nil {
-			log.Printf("Error converting message %s: %v", msg.Id, err)
-			continue
-		}
+    if response == nil {
+        return []domain.Email{}, nil
+    }
 
-		// Aplicar filtros adicionales
-		if c.matchesFilter(email, filter) {
-			emails = append(emails, *email)
-		}
-	}
+    var emails []domain.Email
+    for _, msg := range response.Messages {
+        if msg == nil {
+            //fmt.Printf("⚠️  Skipping nil message\n")
+            continue
+        }
 
-	return emails, nil
+        // ✅ CORRECCIÓN: Obtener cada mensaje individualmente con Format("metadata")
+        fullMsg, err := c.service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
+        if err != nil {
+            log.Printf("❌ Error getting full message %s: %v\n", msg.Id, err)
+            continue
+        }
+
+        email, err := c.convertGmailMessage(fullMsg)
+        if err != nil {
+            log.Printf("❌ Error converting message %s: %v\n", msg.Id, err)
+            continue
+        }
+
+        // Aplicar filtros adicionales
+        if c.matchesFilter(email, filter) {
+            emails = append(emails, *email)
+        }
+    }
+
+    //fmt.Printf("📨 Found %d emails with filter Unread=%t, Label='%s'\n", len(emails), filter.Unread, filter.Label)
+    return emails, nil
+}
+
+func (c *gmailClient) buildSearchQuery(filter domain.EmailFilter) string {
+    var queryParts []string
+    
+    //fmt.Printf("🔍 Building query - Unread: %t, Label: '%s'\n", filter.Unread, filter.Label)
+    
+    // ✅ CORRECCIÓN: Siempre aplicar "is:unread" cuando filter.Unread es true
+    if filter.Unread {
+        queryParts = append(queryParts, "is:unread")
+    }
+    
+    // Si se especifica un label, buscar en esa etiqueta
+    if filter.Label != "" {
+        queryParts = append(queryParts, fmt.Sprintf("label:%s", filter.Label))
+    }
+    
+    // Filtros adicionales
+    if filter.From != "" {
+        queryParts = append(queryParts, fmt.Sprintf("from:%s", filter.From))
+    }
+    if filter.Subject != "" {
+        queryParts = append(queryParts, fmt.Sprintf("subject:%s", filter.Subject))
+    }
+    if !filter.Since.IsZero() {
+        queryParts = append(queryParts, fmt.Sprintf("after:%d", filter.Since.Unix()))
+    }
+    
+    finalQuery := strings.Join(queryParts, " ")
+    //fmt.Printf("📨 Final Gmail API Query: '%s'\n", finalQuery)
+    
+    return finalQuery
 }
 
 // GetLabelID obtiene el ID de una etiqueta por su nombre
@@ -185,27 +241,27 @@ func (c *gmailClient) MoveToLabel(ctx context.Context, emailID, labelID string) 
 	return err
 }
 
-// ListUnreadMessages - Tu implementación existente
+/* // ListUnreadMessages - Tu implementación existente
+// ListUnreadMessages - Método auxiliar específico para no leídos
 func (c *gmailClient) ListUnreadMessages() ([]*gmail.Message, error) {
-	// Buscar mensajes no leídos
-	call := c.service.Users.Messages.List("me").Q("is:unread")
-	response, err := call.Do()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve messages: %v", err)
-	}
+    call := c.service.Users.Messages.List("me").Q("is:unread")
+    response, err := call.Do()
+    if err != nil {
+        return nil, fmt.Errorf("unable to retrieve messages: %v", err)
+    }
 
-	var messages []*gmail.Message
-	for _, msg := range response.Messages {
-		message, err := c.service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
-		if err != nil {
-			log.Printf("Error getting message %s: %v", msg.Id, err)
-			continue
-		}
-		messages = append(messages, message)
-	}
+    var messages []*gmail.Message
+    for _, msg := range response.Messages {
+        message, err := c.service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
+        if err != nil {
+            log.Printf("Error getting message %s: %v", msg.Id, err)
+            continue
+        }
+        messages = append(messages, message)
+    }
 
-	return messages, nil
-}
+    return messages, nil
+} */
 
 // GetMessageDetails - Tu implementación existente
 func (c *gmailClient) GetMessageDetails(messageId string) (*gmail.Message, error) {
@@ -228,38 +284,51 @@ func (c *gmailClient) DeleteEmail(ctx context.Context, emailID string) error {
 }
 
 // convertGmailMessage convierte un mensaje de Gmail a nuestro dominio
+// convertGmailMessage convierte un mensaje de Gmail a nuestro dominio
 func (c *gmailClient) convertGmailMessage(gmailMsg *gmail.Message) (*domain.Email, error) {
-	email := &domain.Email{
-		ID:           gmailMsg.Id,
-		InternalDate: gmailMsg.InternalDate,
-		RawData:      []byte{}, // Podemos serializar si es necesario
-	}
+    // ✅ VALIDACIÓN: Verificar que el mensaje no sea nil
+    if gmailMsg == nil {
+        return nil, fmt.Errorf("gmail message is nil")
+    }
 
-	// Extraer información de los headers
-	for _, header := range gmailMsg.Payload.Headers {
-		switch strings.ToLower(header.Name) {
-		case "from":
-			email.From = header.Value
-		case "subject":
-			email.Subject = header.Value
-		case "date":
-			if parsedDate, err := time.Parse(time.RFC1123Z, header.Value); err == nil {
-				email.ReceivedAt = parsedDate
-			}
-		}
-	}
+    email := &domain.Email{
+        ID:           gmailMsg.Id,
+        InternalDate: gmailMsg.InternalDate,
+        RawData:      []byte{},
+    }
 
-	// Si necesitamos detalles completos (cuerpo y adjuntos)
-	if len(gmailMsg.Payload.Parts) == 0 {
-		// Obtener mensaje completo
-		fullMessage, err := c.GetMessageDetails(gmailMsg.Id)
-		if err != nil {
-			return nil, fmt.Errorf("error getting full message: %w", err)
-		}
-		return c.extractFullMessageDetails(fullMessage)
-	}
+    // ✅ VALIDACIÓN: Verificar que Payload no sea nil
+    if gmailMsg.Payload == nil {
+        return email, nil // Retornar email básico sin headers
+    }
 
-	return email, nil
+    // Extraer información de los headers
+    if gmailMsg.Payload.Headers != nil {
+        for _, header := range gmailMsg.Payload.Headers {
+            switch strings.ToLower(header.Name) {
+            case "from":
+                email.From = header.Value
+            case "subject":
+                email.Subject = header.Value
+            case "date":
+                if parsedDate, err := time.Parse(time.RFC1123Z, header.Value); err == nil {
+                    email.ReceivedAt = parsedDate
+                }
+            }
+        }
+    }
+
+    // Si necesitamos detalles completos (cuerpo y adjuntos)
+    if len(gmailMsg.Payload.Parts) == 0 {
+        // Obtener mensaje completo
+        fullMessage, err := c.GetMessageDetails(gmailMsg.Id)
+        if err != nil {
+            return nil, fmt.Errorf("error getting full message: %w", err)
+        }
+        return c.extractFullMessageDetails(fullMessage)
+    }
+
+    return email, nil
 }
 
 // extractFullMessageDetails extrae cuerpo y adjuntos del mensaje completo
@@ -297,11 +366,11 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 		return nil
 	}
 
-	fmt.Printf("  🔍 Processing part: %s\n", part.MimeType)
+	//fmt.Printf("  🔍 Processing part: %s\n", part.MimeType)
 
 	// Procesar adjuntos en esta parte
 	if part.Filename != "" {
-		fmt.Printf("  📎 Found file: %s (MIME: %s)\n", part.Filename, part.MimeType)
+		//fmt.Printf("  📎 Found file: %s (MIME: %s)\n", part.Filename, part.MimeType)
 
 		var attachmentData []byte
 		var err error
@@ -318,7 +387,7 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 
 		// Caso 2: Attachment ID (necesita descarga separada)
 		if part.Body != nil && part.Body.AttachmentId != "" {
-			fmt.Printf("  🔗 Downloading attachment with ID: %s\n", part.Body.AttachmentId)
+			//fmt.Printf("  🔗 Downloading attachment with ID: %s\n", part.Body.AttachmentId)
 			attachment, err := c.service.Users.Messages.Attachments.Get("me", email.ID, part.Body.AttachmentId).Do()
 			if err != nil {
 				fmt.Printf("  ❌ Error downloading attachment: %v\n", err)
@@ -339,14 +408,14 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 				Content:  attachmentData,
 				MIMEType: part.MimeType,
 			})
-			fmt.Printf("  ✅ Added attachment: %s (%d bytes)\n", part.Filename, len(attachmentData))
+			//fmt.Printf("  ✅ Added attachment: %s (%d bytes)\n", part.Filename, len(attachmentData))
 		}
 	}
 
 	// Procesar partes hijas recursivamente
 	if part.Parts != nil {
-		for i, subpart := range part.Parts {
-			fmt.Printf("  🔄 Processing subpart %d/%d\n", i+1, len(part.Parts))
+		for _, subpart := range part.Parts {
+			//fmt.Printf("  🔄 Processing subpart %d/%d\n", i+1, len(part.Parts))
 			if err := c.extractContent(subpart, email); err != nil {
 				fmt.Printf("  ❌ Error processing subpart: %v\n", err)
 			}
@@ -358,7 +427,7 @@ func (c *gmailClient) extractContent(part *gmail.MessagePart, email *domain.Emai
 
 // FindZipAttachments busca específicamente adjuntos ZIP en un mensaje
 func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) ([][]byte, []string, error) {
-	fmt.Printf("🔍 Searching for ZIP attachments in message: %s\n", messageID)
+	//fmt.Printf("🔍 Searching for ZIP attachments in message: %s\n", messageID)
 
 	// Obtener mensaje completo
 	fullMessage, err := c.GetMessageDetails(messageID)
@@ -378,7 +447,7 @@ func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) 
 
 		// Verificar si es un archivo ZIP
 		if part.Filename != "" && strings.HasSuffix(strings.ToLower(part.Filename), ".zip") {
-			fmt.Printf("📎 Found ZIP file: %s\n", part.Filename)
+			//fmt.Printf("📎 Found ZIP file: %s\n", part.Filename)
 
 			var fileData []byte
 
@@ -387,13 +456,13 @@ func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) 
 				data, err := base64.URLEncoding.DecodeString(part.Body.Data)
 				if err == nil && len(data) > 0 {
 					fileData = data
-					fmt.Printf("💾 ZIP data from body: %d bytes\n", len(fileData))
+					//fmt.Printf("💾 ZIP data from body: %d bytes\n", len(fileData))
 				}
 			}
 
 			// Si no hay datos en el body, intentar descargar por AttachmentId
 			if len(fileData) == 0 && part.Body != nil && part.Body.AttachmentId != "" {
-				fmt.Printf("🔗 Downloading ZIP attachment: %s (ID: %s)\n", part.Filename, part.Body.AttachmentId)
+				//fmt.Printf("🔗 Downloading ZIP attachment: %s (ID: %s)\n", part.Filename, part.Body.AttachmentId)
 				attachment, err := c.service.Users.Messages.Attachments.Get("me", messageID, part.Body.AttachmentId).Do()
 				if err != nil {
 					fmt.Printf("❌ Error downloading ZIP: %v\n", err)
@@ -403,7 +472,7 @@ func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) 
 						fmt.Printf("❌ Error decoding ZIP: %v\n", err)
 					} else {
 						fileData = data
-						fmt.Printf("💾 Downloaded ZIP: %d bytes\n", len(fileData))
+						//fmt.Printf("💾 Downloaded ZIP: %d bytes\n", len(fileData))
 					}
 				}
 			}
@@ -412,7 +481,7 @@ func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) 
 			if len(fileData) > 0 {
 				zipContents = append(zipContents, fileData)
 				zipFilenames = append(zipFilenames, part.Filename)
-				fmt.Printf("✅ ZIP ready for processing: %s (%d bytes)\n", part.Filename, len(fileData))
+				//fmt.Printf("✅ ZIP ready for processing: %s (%d bytes)\n", part.Filename, len(fileData))
 			} else {
 				fmt.Printf("❌ No data found for ZIP: %s\n", part.Filename)
 			}
@@ -429,7 +498,7 @@ func (c *gmailClient) FindZipAttachments(ctx context.Context, messageID string) 
 	// Iniciar búsqueda
 	searchForZips(fullMessage.Payload)
 
-	fmt.Printf("📦 Found %d ZIP attachments in message %s\n", len(zipContents), messageID)
+	//fmt.Printf("📦 Found %d ZIP attachments in message %s\n", len(zipContents), messageID)
 	return zipContents, zipFilenames, nil
 }
 

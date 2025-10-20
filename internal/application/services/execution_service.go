@@ -80,7 +80,7 @@ func (s *executionService) Run(ctx context.Context) error {
 	jsonPath := s.config.Paths.JSONFile
 	if s.fileRepo.FileExists(jsonPath) {
 		if err := os.Remove(jsonPath); err != nil {
-			fmt.Printf("Warning: could not delete JSON file: %v\n", err)
+			//fmt.Printf("Warning: could not delete JSON file: %v\n", err)
 		}
 	}
 
@@ -102,7 +102,7 @@ func (s *executionService) getNITs(ctx context.Context, token string) ([]string,
 
 	// Guardar localmente
 	if err := s.fileRepo.SaveJSON(nitsData, s.config.Paths.JSONFile); err != nil {
-		fmt.Printf("Warning: could not save NITs to JSON: %v\n", err)
+		//fmt.Printf("Warning: could not save NITs to JSON: %v\n", err)
 	}
 
 	return s.extractNITsFromData(nitsData), nil
@@ -140,7 +140,7 @@ func (s *executionService) ProcessExistingFiles(ctx context.Context, token strin
 
 	for _, zipFile := range files {
 		if err := s.processZipFile(ctx, zipFile, token); err != nil {
-			fmt.Printf("Error processing ZIP file %s: %v\n", zipFile, err)
+			//fmt.Printf("Error processing ZIP file %s: %v\n", zipFile, err)
 			continue
 		}
 	}
@@ -167,7 +167,7 @@ func (s *executionService) processZipFile(ctx context.Context, zipPath, token st
 
 	for _, xmlFile := range xmlFiles {
 		if err := s.processXMLFile(ctx, xmlFile, token); err != nil {
-			fmt.Printf("Error processing XML file %s: %v\n", xmlFile, err)
+			//fmt.Printf("Error processing XML file %s: %v\n", xmlFile, err)
 			continue
 		}
 	}
@@ -234,7 +234,7 @@ func (s *executionService) processXMLFile(ctx context.Context, xmlPath, token st
 		return fmt.Errorf("API returned error: %s", response.Message)
 	}
 
-	fmt.Printf("✅ Factura %s procesada exitosamente\n", invoiceData.FEVIdFac)
+	//fmt.Printf("✅ Factura %s procesada exitosamente\n", invoiceData.FEVIdFac)
 	return nil
 }
 
@@ -261,68 +261,93 @@ func (s *executionService) cleanProcessedFiles() error {
 }
 
 func (s *executionService) ProcessEmails(ctx context.Context, nits []string, token string) error {
-	fmt.Printf("📧 Processing emails from label 'No eliminar/pb scrapping' for %d NITs: %v\n", len(nits), nits)
+    //fmt.Printf("📧 Processing UNREAD emails from label 'No eliminar/pb scrapping' for %d NITs: %v\n", len(nits), nits)
 
-	// Obtener emails de la etiqueta específica
-	emails, err := s.emailRepo.GetEmailsByLabel(ctx, "No eliminar/pb scrapping")
-	if err != nil {
-		return fmt.Errorf("error fetching emails from label: %w", err)
-	}
+    filter := domain.EmailFilter{
+        Unread: true,
+        Label:  "No eliminar/pb scrapping",
+    }
+    
+    emails, err := s.emailRepo.GetEmails(ctx, filter)
+    if err != nil {
+        return fmt.Errorf("error fetching UNREAD emails from label: %w", err)
+    }
 
-	fmt.Printf("📨 Found %d total emails in label\n", len(emails))
+    //fmt.Printf("📨 Found %d UNREAD emails in label 'No eliminar/pb scrapping'\n", len(emails))
+    
+    // ✅ MOSTRAR TODOS LOS SUBJECTS
+    /* //fmt.Printf("\n📋 ALL EMAIL SUBJECTS:\n")
+    for i, email := range emails {
+        //fmt.Printf("  %d. '%s'\n", i+1, email.Subject)
+    }
+    //fmt.Printf("\n") */
 
-	var adjuntos []string
-	var correosSinAdjunto []map[string]string
-	var emailsFiltrados int
+    var adjuntos []string
+    var correosSinAdjunto []map[string]string
+    var emailsFiltrados int
 
-	for _, email := range emails {
-		// Filtrar por palabras clave (NITs) en el asunto
-		if !s.emailMatchesNITs(email, nits) {
-			continue
-		}
-		emailsFiltrados++
+    for _, email := range emails {
+        // Filtrar por palabras clave (NITs) en el asunto
+        if !s.emailMatchesNITs(email, nits) {
+            continue
+        }
+        emailsFiltrados++
 
-		fmt.Printf("\n📧 [%d/%d] Processing email: %s - %s\n",
-			emailsFiltrados, len(emails), email.ID, email.Subject)
+        //fmt.Printf("\n✅ 📧 [%d/%d] Processing matching email: %s\n", emailsFiltrados, len(emails), email.Subject)
 
-		// Buscar adjuntos ZIP usando el método específico
-		zipContents, zipFilenames, err := s.emailRepo.FindZipAttachments(ctx, email.ID)
-		if err != nil {
-			fmt.Printf("  ❌ Error searching for ZIP attachments: %v\n", err)
-			continue
-		}
+        // Buscar adjuntos ZIP usando el método específico
+        zipContents, zipFilenames, err := s.emailRepo.FindZipAttachments(ctx, email.ID)
+        if err != nil {
+            //fmt.Printf("  ❌ Error searching for ZIP attachments: %v\n", err)
+            continue
+        }
 
-		if len(zipContents) > 0 {
-			fmt.Printf("  📦 Found %d ZIP attachments\n", len(zipContents))
-			for j, zipData := range zipContents {
-				filename := zipFilenames[j]
-				fmt.Printf("  💾 Processing ZIP: %s (%d bytes)\n", filename, len(zipData))
+        if len(zipContents) > 0 {
+            //fmt.Printf("  📦 Found %d ZIP attachments\n", len(zipContents))
+            for j, zipData := range zipContents {
+                filename := zipFilenames[j]
+                //fmt.Printf("  💾 Processing ZIP: %s (%d bytes)\n", filename, len(zipData))
 
-				// Guardar el ZIP
-				savedPath := s.saveZipAttachment(filename, zipData)
-				if savedPath != "" {
-					adjuntos = append(adjuntos, savedPath)
-					fmt.Printf("  ✅ ZIP saved: %s\n", savedPath)
-				}
-			}
-		} else {
-			fmt.Printf("  📭 No ZIP attachments found\n")
-			// Si no hay adjuntos, extraer datos del asunto
-			correoData := s.extractDataFromSubject(email.Subject)
-			if correoData != nil {
-				correosSinAdjunto = append(correosSinAdjunto, correoData)
-				fmt.Printf("  📝 Extracted data from subject: %s\n", correoData["numero_factura"])
-			}
-		}
+                // Guardar el ZIP
+                savedPath := s.saveZipAttachment(filename, zipData)
+                if savedPath != "" {
+                    adjuntos = append(adjuntos, savedPath)
+                    //fmt.Printf("  ✅ ZIP saved: %s\n", savedPath)
+                }
+            }
+        } else {
+            //fmt.Printf("  📭 No ZIP attachments found\n")
+            // Si no hay adjuntos, extraer datos del asunto
+            correoData := s.extractDataFromSubject(email.Subject)
+            if correoData != nil {
+                correosSinAdjunto = append(correosSinAdjunto, correoData)
+                //fmt.Printf("  📝 Extracted data from subject: %s\n", correoData["numero_factura"])
+            }
+        }
 
-		// Marcar como leído (opcional)
-		if err := s.emailRepo.DeleteEmail(ctx, email.ID); err != nil {
-			fmt.Printf("  ⚠️  Could not mark email as read: %v\n", err)
-		}
-	}
+        // Marcar como leído después de procesar
+        if err := s.emailRepo.DeleteEmail(ctx, email.ID); err != nil {
+            //fmt.Printf("  ⚠️  Could not mark email as read: %v\n", err)
+        }
+    }
 
-	// Resto del código para procesar adjuntos y enviar alarmas...
-	return nil
+    // Procesar los ZIPs guardados
+    for _, zipPath := range adjuntos {
+        if err := s.processZipFile(ctx, zipPath, token); err != nil {
+            //fmt.Printf("❌ Error processing ZIP file %s: %v\n", zipPath, err)
+        }
+    }
+
+    // Enviar alarmas para correos sin adjunto
+    for _, correoData := range correosSinAdjunto {
+        if err := s.SendAlarm(ctx, token, correoData); err != nil {
+            //fmt.Printf("❌ Error sending alarm for invoice %s: %v\n", correoData["numero_factura"], err)
+        }
+    }
+
+    //fmt.Printf("✅ Processed %d emails with NITs, found %d ZIPs, %d without attachments\n", emailsFiltrados, len(adjuntos), len(correosSinAdjunto))
+
+    return nil
 }
 
 // Nuevo método para guardar adjuntos ZIP
@@ -337,7 +362,7 @@ func (s *executionService) saveZipAttachment(filename string, content []byte) st
 	filePath := filepath.Join(s.config.Paths.ZipFolder, finalFilename)
 
 	if err := os.WriteFile(filePath, content, 0644); err != nil {
-		fmt.Printf("  ❌ Error saving ZIP file: %v\n", err)
+		//fmt.Printf("  ❌ Error saving ZIP file: %v\n", err)
 		return ""
 	}
 
@@ -350,24 +375,35 @@ func (s *executionService) saveZipAttachment(filename string, content []byte) st
 }
 
 func (s *executionService) emailMatchesNITs(email domain.Email, nits []string) bool {
-	subject := strings.ToLower(email.Subject)
-	for _, nit := range nits {
-		if strings.Contains(subject, strings.ToLower(nit)) {
-			return true
-		}
-	}
-	return false
+    subject := email.Subject
+    
+    // Dividir el subject por punto y coma
+    parts := strings.Split(subject, ";")
+    if len(parts) == 0 {
+        return false
+    }
+    
+    // El NIT debería estar en la primera parte
+    nitFromSubject := strings.TrimSpace(parts[0])
+    
+    // Buscar si este NIT está en la lista de NITs buscados
+    for _, nit := range nits {
+        if nitFromSubject == nit {
+            return true
+        }
+    }
+    
+    return false
 }
 
 func (s *executionService) extractZipAttachments(email domain.Email) []string {
 	var zipFiles []string
 
-	fmt.Printf("  🔍 Searching for ZIP attachments in email %s\n", email.ID)
-	fmt.Printf("  📎 Total attachments: %d\n", len(email.Attachments))
+	//fmt.Printf("  🔍 Searching for ZIP attachments in email %s\n", email.ID)
+	//fmt.Printf("  📎 Total attachments: %d\n", len(email.Attachments))
 
-	for i, attachment := range email.Attachments {
-		fmt.Printf("  📎 Attachment %d: %s (%d bytes, %s)\n",
-			i+1, attachment.Filename, len(attachment.Content), attachment.MIMEType)
+	for _, attachment := range email.Attachments {
+		//fmt.Printf("  📎 Attachment %d: %s (%d bytes, %s)\n", i+1, attachment.Filename, len(attachment.Content), attachment.MIMEType)
 
 		if strings.HasSuffix(strings.ToLower(attachment.Filename), ".zip") {
 			// Limpiar nombre de archivo de caracteres inválidos
@@ -379,19 +415,19 @@ func (s *executionService) extractZipAttachments(email domain.Email) []string {
 			filename := fmt.Sprintf("%s_%s", timestamp, cleanName)
 			filePath := filepath.Join(s.config.Paths.ZipFolder, filename)
 
-			fmt.Printf("  💾 Saving ZIP attachment: %s (%d bytes)\n", filename, len(attachment.Content))
+			//fmt.Printf("  💾 Saving ZIP attachment: %s (%d bytes)\n", filename, len(attachment.Content))
 
 			if err := os.WriteFile(filePath, attachment.Content, 0644); err != nil {
-				fmt.Printf("  ❌ Error saving attachment %s: %v\n", attachment.Filename, err)
+				//fmt.Printf("  ❌ Error saving attachment %s: %v\n", attachment.Filename, err)
 				continue
 			}
 
 			// Verificar que el archivo se guardó correctamente
-			if fileInfo, err := os.Stat(filePath); err == nil {
-				fmt.Printf("  ✅ ZIP saved successfully: %s (%d bytes)\n", filename, fileInfo.Size())
+			if _, err := os.Stat(filePath); err == nil {
+				//fmt.Printf("  ✅ ZIP saved successfully: %s (%d bytes)\n", filename, fileInfo.Size())
 				zipFiles = append(zipFiles, filePath)
 			} else {
-				fmt.Printf("  ❌ Error verifying saved file: %v\n", err)
+				//fmt.Printf("  ❌ Error verifying saved file: %v\n", err)
 			}
 		}
 	}
@@ -410,7 +446,7 @@ func (s *executionService) extractDataFromSubject(subject string) map[string]str
 		}
 	}
 
-	fmt.Printf("⚠️  Malformed subject: %s\n", subject)
+	//fmt.Printf("⚠️  Malformed subject: %s\n", subject)
 	return nil
 }
 

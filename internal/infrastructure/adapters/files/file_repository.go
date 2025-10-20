@@ -27,7 +27,7 @@ func (f *fileRepository) CountFiles(directory string) (int, error) {
 	// directory ya viene con el path completo, no necesitamos unirlo con baseDir
 	dirPath := directory
 
-	fmt.Printf("📁 Counting files in: %s\n", dirPath)
+	//fmt.Printf("📁 Counting files in: %s\n", dirPath)
 
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
@@ -41,12 +41,12 @@ func (f *fileRepository) CountFiles(directory string) (int, error) {
 		}
 	}
 
-	fmt.Printf("📊 Found %d files in directory\n", count)
+	//fmt.Printf("📊 Found %d files in directory\n", count)
 	return count, nil
 }
 
 func (f *fileRepository) ExtractZip(zipPath, destPath string) error {
-	fmt.Printf("📦 Extracting ZIP: %s to %s\n", zipPath, destPath)
+	//fmt.Printf("📦 Extracting ZIP: %s to %s\n", zipPath, destPath)
 
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -96,7 +96,7 @@ func (f *fileRepository) ExtractZip(zipPath, destPath string) error {
 }
 
 func (f *fileRepository) MoveFile(source, destination string) error {
-	fmt.Printf("📁 Moving file: %s to %s\n", source, destination)
+	//fmt.Printf("📁 Moving file: %s to %s\n", source, destination)
 
 	// Crear directorio de destino si no existe
 	if err := os.MkdirAll(filepath.Dir(destination), 0755); err != nil {
@@ -111,7 +111,7 @@ func (f *fileRepository) MoveFile(source, destination string) error {
 }
 
 func (f *fileRepository) DeleteFiles(directory, extension string) error {
-	fmt.Printf("🗑️  Deleting files in: %s with extension: %s\n", directory, extension)
+	//fmt.Printf("🗑️  Deleting files in: %s with extension: %s\n", directory, extension)
 
 	files, err := filepath.Glob(filepath.Join(directory, "*."+extension))
 	if err != nil {
@@ -132,7 +132,7 @@ func (f *fileRepository) ReadFile(filePath string) ([]byte, error) {
 }
 
 func (f *fileRepository) WriteFile(filePath string, data []byte) error {
-	fmt.Printf("📝 Writing file: %s\n", filePath)
+	//fmt.Printf("📝 Writing file: %s\n", filePath)
 
 	// Crear directorio si no existe
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {

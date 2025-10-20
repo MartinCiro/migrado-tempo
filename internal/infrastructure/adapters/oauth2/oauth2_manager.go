@@ -153,7 +153,7 @@ func (m *oauth2Manager) tokenFromFile() (*oauth2.Token, error) {
 }
 
 func (m *oauth2Manager) saveToken(token *oauth2.Token) error {
-	fmt.Printf("Saving token file to: %s\n", m.tokenFile)
+	//fmt.Printf("Saving token file to: %s\n", m.tokenFile)
 
 	f, err := os.OpenFile(m.tokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -165,9 +165,8 @@ func (m *oauth2Manager) saveToken(token *oauth2.Token) error {
 }
 
 func (m *oauth2Manager) getTokenFromWeb(ctx context.Context) (*oauth2.Token, error) {
-	authURL := m.config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
+	//authURL := m.config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	//fmt.Printf("Go to the following link in your browser then type the "+ "authorization code: \n%v\n", authURL)
 
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {

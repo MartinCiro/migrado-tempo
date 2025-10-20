@@ -8,6 +8,7 @@ type EmailCriteria struct {
 	Subject string
 	Since   time.Time
 	Unread  bool
+	Label    string
 }
 
 // EmailFilter filtro para búsqueda de emails
@@ -15,6 +16,8 @@ type EmailFilter struct {
 	From    string
 	Subject string
 	Since   time.Time
+	Unread  bool
+	Label    string
 }
 
 // Email representa un correo electrónico

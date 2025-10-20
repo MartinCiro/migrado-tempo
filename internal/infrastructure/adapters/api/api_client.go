@@ -53,7 +53,7 @@ func (c *apiClient) Login(ctx context.Context, credentials map[string]string) (*
 		return nil, fmt.Errorf("login failed: %s", authResponse.Message)
 	}
 
-	//fmt.Printf("✅ Login successful\n")
+	////fmt.Printf("✅ Login successful\n")
 	return &authResponse, nil
 }
 
@@ -97,8 +97,7 @@ func (c *apiClient) SendInvoice(ctx context.Context, token string, invoice *doma
 	}
 
 	// Debug: mostrar la estructura de la respuesta
-	fmt.Printf("📥 Invoice API Response - OK: %t, Status: %d, Result type: %T\n",
-		apiResponse.OK, apiResponse.StatusCode, apiResponse.Result)
+	//fmt.Printf("📥 Invoice API Response - OK: %t, Status: %d, Result type: %T\n", apiResponse.OK, apiResponse.StatusCode, apiResponse.Result)
 
 	// Manejar caso especial de factura duplicada
 	if apiResponse.StatusCode == 409 || apiResponse.StatusCode == 400 {

@@ -42,7 +42,7 @@ func (er *EmailReader) Run(ctx context.Context) {
 
 	// Solo ejecutar periódicamente si hay configuración y intervalo > 0
 	if er.config != nil && er.config.ScrapingInterval > 0 {
-		fmt.Printf("🔄 Starting periodic execution every %d minutes...\n", er.config.ScrapingInterval)
+		//fmt.Printf("🔄 Starting periodic execution every %d minutes...\n", er.config.ScrapingInterval)
 		er.runPeriodically(ctx)
 	} else {
 		fmt.Println("⏹️  Scraping interval is 0 or config missing, running once only")
@@ -57,7 +57,7 @@ func (er *EmailReader) runPeriodically(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Printf("\n🔄 Periodic execution at %s...\n", time.Now().Format("2006-01-02 15:04:05"))
+			//fmt.Printf("\n🔄 Periodic execution at %s...\n", time.Now().Format("2006-01-02 15:04:05"))
 
 			if err := er.executionService.Run(ctx); err != nil {
 				log.Printf("❌ Periodic execution failed: %v", err)

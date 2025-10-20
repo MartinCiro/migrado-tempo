@@ -38,12 +38,18 @@ func (r *emailRepository) FindZipAttachments(ctx context.Context, messageID stri
 }
 
 func (r *emailRepository) SearchEmails(criteria domain.EmailCriteria) ([]domain.Email, error) {
-	filter := domain.EmailFilter{
-		From:    criteria.From,
-		Subject: criteria.Subject,
-		Since:   criteria.Since,
-	}
-	return r.gmailClient.GetEmails(context.Background(), filter)
+    //fmt.Printf("🔍 DEBUG Repository - Received criteria: Unread=%t, Label='%s'\n", criteria.Unread, criteria.Label)
+    
+    filter := domain.EmailFilter{
+        From:    criteria.From,
+        Subject: criteria.Subject,
+        Since:   criteria.Since,
+        Unread:  criteria.Unread,
+        Label:   criteria.Label,
+    }
+    //fmt.Printf("🔍 DEBUG Repository - Created filter: Unread=%t, Label='%s'\n", filter.Unread, filter.Label)
+    
+    return r.gmailClient.GetEmails(context.Background(), filter)
 }
 
 func (r *emailRepository) GetEmails(ctx context.Context, filter domain.EmailFilter) ([]domain.Email, error) {
