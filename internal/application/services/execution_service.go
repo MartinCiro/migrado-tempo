@@ -203,51 +203,76 @@ func (s *executionService) moveExtractedFiles() error {
 }
 
 func (s *executionService) processXMLFile(ctx context.Context, xmlPath, token string) error {
-	invoiceData, err := s.invoiceService.ProcessInvoiceFromFile(ctx, xmlPath)
-	if err != nil {
-		return fmt.Errorf("error processing invoice: %w", err)
-	}
+    xmlName := filepath.Base(xmlPath)
+    
+    invoiceData, err := s.invoiceService.ProcessInvoiceFromFile(ctx, xmlPath)
+    if err != nil {
+        return fmt.Errorf("error processing invoice: %w", err)
+    }
 
-	// Obtener archivos en base64
-	xmlBase64, err := s.fileRepo.FileToBase64(xmlPath)
-	if err != nil {
-		return fmt.Errorf("error encoding XML to base64: %w", err)
-	}
+    // Obtener XML en base64
+    xmlBase64, err := s.fileRepo.FileToBase64(xmlPath)
+    if err != nil {
+        return fmt.Errorf("error encoding XML to base64: %w", err)
+    }
 
-	pdfBase64, err := s.getPDFBase64(xmlPath)
-	if err != nil {
-		return fmt.Errorf("error encoding PDF to base64: %w", err)
-	}
+    // ✅ BUSCAR PDF CORRESPONDIENTE
+    pdfBase64, err := s.findAndConvertPDF(xmlPath)
+    if err != nil {
+        return fmt.Errorf("error finding PDF: %w", err)
+    }
 
-	// Completar datos para API
-	invoiceData.XMLString = xmlBase64
-	invoiceData.PDFBase64 = pdfBase64
-	invoiceData.Email = os.Getenv("USER_API")
+    // Completar datos para API
+    invoiceData.XMLString = xmlBase64
+    invoiceData.PDFBase64 = pdfBase64
+    invoiceData.Email = os.Getenv("USER_API")
 
-	// Enviar a API
-	response, err := s.authService.SendInvoice(ctx, token, invoiceData)
-	if err != nil {
-		return fmt.Errorf("error sending invoice to API: %w", err)
-	}
+    fmt.Printf("  📤 Sending invoice to API: %s\n", invoiceData.FEVIdFac)
+    
+    // Enviar a API
+    response, err := s.authService.SendInvoice(ctx, token, invoiceData)
+    if err != nil {
+        return fmt.Errorf("error sending invoice to API: %w", err)
+    }
 
-	if !response.OK {
-		return fmt.Errorf("API returned error: %s", response.Message)
-	}
+    if !response.OK {
+        return fmt.Errorf("API returned error: %s", response.Message)
+    }
 
-	//fmt.Printf("✅ Factura %s procesada exitosamente\n", invoiceData.FEVIdFac)
-	return nil
+    fmt.Printf("  ✅ Factura %s procesada exitosamente\n", invoiceData.FEVIdFac)
+    return nil
 }
 
-func (s *executionService) getPDFBase64(xmlPath string) (string, error) {
-	xmlName := filepath.Base(xmlPath)
-	pdfName := xmlName[:len(xmlName)-len(filepath.Ext(xmlName))] + ".pdf"
-	pdfPath := filepath.Join(s.config.Paths.PDFFolder, pdfName)
-
-	if s.fileRepo.FileExists(pdfPath) {
-		return s.fileRepo.FileToBase64(pdfPath)
-	}
-
-	return "", nil
+ // findAndConvertPDF busca el PDF que corresponde al XML
+func (s *executionService) findAndConvertPDF(xmlPath string) (string, error) {
+    xmlName := filepath.Base(xmlPath)
+    
+    // Extraer el identificador único del XML (remover "ad" y extensión .xml)
+    // XML: ad090021983400025030e2bb4.xml → 090021983400025030e2bb4
+    xmlID := strings.TrimSuffix(strings.TrimPrefix(xmlName, "ad"), ".xml")
+    
+    //fmt.Printf("  🔍 Looking for PDF with ID: %s\n", xmlID)
+    
+    // Construir el nombre esperado del PDF
+    expectedPDFName := "de" + xmlID + ".pdf"
+    pdfPath := filepath.Join(s.config.Paths.PDFFolder, expectedPDFName)
+    
+    // Verificar si el PDF existe
+    if !s.fileRepo.FileExists(pdfPath) {
+        fmt.Printf("  ⚠️  PDF not found: %s\n", expectedPDFName)
+        return "", nil
+    }
+    
+    //fmt.Printf("  📄 Found matching PDF: %s\n", expectedPDFName)
+    
+    // Convertir a base64
+    pdfBase64, err := s.fileRepo.FileToBase64(pdfPath)
+    if err != nil {
+        return "", fmt.Errorf("error encoding PDF to base64: %w", err)
+    }
+    
+    //fmt.Printf("  ✅ PDF converted to base64: %d characters\n", len(pdfBase64))
+    return pdfBase64, nil
 }
 
 func (s *executionService) cleanProcessedFiles() error {
