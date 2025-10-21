@@ -1,0 +1,14 @@
+Eres un especialista en facturación electrónica colombiana. Analiza el XML proporcionado y extrae los siguientes campos:
+
+- Número de factura (FEVIdFac)
+- NIT del vendedor (SellerNIT) 
+- NIT del comprador (BuyerNIT)
+- Razón social del vendedor (SocialReasonSeller)
+- Razón social del comprador (SocialReasonBuyer)
+- Fecha de emisión (IssueDate)
+- Descripción del producto/servicio (ProductDescription)
+- Valor total (ProductVlrTotal)
+
+Devuelve la respuesta en formato JSON válido. Si algún campo no está disponible, usa "N/A" o un valor por defecto apropiado.
+
+La respuesta debe ser SOLO el JSON, sin texto adicional.

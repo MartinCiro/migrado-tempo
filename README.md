@@ -15,18 +15,21 @@ email-bot/
 │   │   │   ├── email.go           # Entidades: Email, Attachment, Criteria, Filter
 │   │   │   ├── auth.go            # Entidades: Auth, Token, NIT
 │   │   │   └── invoice.go         # Entidades: InvoiceData, InvoiceResponse
+│   │   │   └── ai.go                    # Nuevo: Entidades para AI
 │   │   └── ports/
 │   │       ├── email_service.go   # Interfaz: EmailService
 │   │       ├── repositories.go    # Interfaz: EmailRepository, FileRepository
 │   │       ├── auth_service.go    # Interfaz: AuthService
 │   │       ├── invoice_service.go # Interfaz: InvoiceService
 │   │       └── execution_service.go # Interfaz: ExecutionService
+│   │       └── ai_service.go        # Nuevo: Interfaz para AI
 │   ├── application/
 │   │   └── services/
 │   │       ├── email_service.go   # Servicio: Lógica de aplicación para emails
 │   │       ├── auth_service.go    # Servicio: Autenticación con API externa
 │   │       ├── invoice_service.go # Servicio: Procesamiento de facturas XML
 │   │       └── execution_service.go # Servicio: Orquestador principal
+│   │       └── ai_service.go            # Nuevo: Servicio de AI
 │   └── infrastructure/
 │       ├── adapters/
 │       │   ├── gmail_api/
@@ -36,7 +39,9 @@ email-bot/
 │       │   ├── repositories/
 │       │   │   └── email_repository.go # Adaptador de repositorio de emails
 │       │   └── http/
-│       │       └── api_client.go   # Cliente HTTP para APIs externas
+│       │   │   └── api_client.go   # Cliente HTTP para APIs externas
+│       │   └── ai/                      # Nuevo: Adaptador de AI
+│       │       └── gemini_client.go     # Nuevo: Cliente Gemini
 │       ├── delivery/
 │       │   └── cli/
 │       │       └── email_reader.go # CLI - Interfaz de línea de comandos
@@ -51,6 +56,9 @@ email-bot/
 │   └── json/                      # Archivos JSON temporales (NITs, cache)
 ├── credentials.json               # Credenciales OAuth2 de Gmail API
 ├── token.json                     # Token de autenticación OAuth2
+├── prompts/                       # Nuevo: Prompts para Gemini
+│   ├── invoice_processing.txt
+│   └── xml_analysis.txt
 └── go.mod                        # Dependencias del proyecto
 ```
 

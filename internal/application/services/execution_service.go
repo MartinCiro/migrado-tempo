@@ -21,6 +21,7 @@ type executionService struct {
 	cryptoService  ports.CryptoService
 	config         *config.AppConfig
 	emailRepo      ports.EmailRepository
+	aiService      ports.AIService
 }
 
 func NewExecutionService(
@@ -206,8 +207,20 @@ func (s *executionService) processXMLFile(ctx context.Context, xmlPath, token st
     //xmlName := filepath.Base(xmlPath)
     
     invoiceData, err := s.invoiceService.ProcessInvoiceFromFile(ctx, xmlPath)
-    if err != nil {
-        return fmt.Errorf("error processing invoice: %w", err)
+    if err != nil || invoiceData == nil || invoiceData.FEVIdFac == "" {
+        fmt.Printf("  ⚠️  Traditional processing failed, using AI fallback: %v\n", err)
+        
+        xmlContent, err := os.ReadFile(xmlPath)
+        if err != nil {
+            return fmt.Errorf("error reading XML file: %w", err)
+        }
+        
+        invoiceData, err = s.aiService.ProcessInvoiceWithAI(ctx, string(xmlContent))
+        if err != nil {
+            return fmt.Errorf("AI processing also failed: %w", err)
+        }
+        
+        fmt.Printf("  ✅ AI successfully processed invoice: %s\n", invoiceData.FEVIdFac)
     }
 
     // Obtener XML en base64
