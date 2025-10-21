@@ -15,12 +15,14 @@ type AppConfig struct {
 	Email   *EmailConfig
 	Invoice *InvoiceConfig
 	Paths   *InvoicePaths
+	Webhook *WebhookConfig
 }
 
-func NewAppConfig(emailConfig *EmailConfig, invoiceConfig *InvoiceConfig, paths *InvoicePaths) *AppConfig {
+func NewAppConfig(emailConfig *EmailConfig, invoiceConfig *InvoiceConfig, paths *InvoicePaths, webhookConfig *WebhookConfig) *AppConfig {
 	return &AppConfig{
 		Email:   emailConfig,
 		Invoice: invoiceConfig,
 		Paths:   paths,
+		Webhook: LoadWebhookConfig(),
 	}
 }

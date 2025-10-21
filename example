@@ -1,6 +1,15 @@
-# Entorno
-DEBUG=true or false
-PORT=8080 or port number
+# Configuración básica
+WEBHOOK_HOST=0.0.0.0
+WEBHOOK_PORT=8080
+WEBHOOK_READ_TIMEOUT=15
+WEBHOOK_WRITE_TIMEOUT=15
+WEBHOOK_IDLE_TIMEOUT=60
+WEBHOOK_ENABLED=true
 
-GMAIL_EMAIL= your gmail address
-GMAIL_APP_PASSWORD= your gmail app password
+# Para desarrollo
+WEBHOOK_HOST=localhost
+WEBHOOK_PORT=3001
+
+# Para producción
+WEBHOOK_HOST=0.0.0.0
+WEBHOOK_PORT=8080

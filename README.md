@@ -147,3 +147,29 @@ vendor/
 ```
 
 Los archivos en `vendor/` son temporales y se limpian automáticamente después del procesamiento.
+
+## 🚀 Modos de Uso:
+
+### **Modo Completo (actual):**
+```bash
+go run cmd/email/main.go
+```
+
+### **Solo Webhook (servicio API):**
+```bash
+go run cmd/email/main.go -mode=webhook
+```
+
+### 📡 Ejemplo de uso del Webhook:
+
+```bash
+curl -X POST http://localhost:8080/webhook/process-xml \
+  -H "Content-Type: application/json" \
+  -d '{
+    "xml_content": "<?xml ...></xml>",
+    "xml_file_name": "factura.xml", 
+    "pdf_content": "base64...",
+    "pdf_file_name": "factura.pdf",
+    "token": "api_token_here"
+  }'
+```
